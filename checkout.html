@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Commerce Checkout</title>
+</head>
+<body>
+  <header>
+    <h1>Checkout</h1>
+  </header>
+  <main>
+    <h2>Your Cart</h2>
+    <div id="cart-items-summary">
+      <p>No items in the cart yet.</p>
+    </div>
+    <p class="checkout-total" style="margin-top:10%;margin-bottom:10%;"><strong>Total:</strong> Rs <span style="color:green;font-weight:900;" id="checkout-total">0.00</span></p>
+
+    <h2>Contact Information</h2>
+    <form id="checkout-form">
+      <div>
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="Name" placeholder="Enter your full name" required>
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="Email" placeholder="Enter your email" required>
+      </div>
+      <div>
+        <label for="phone">Phone Number</label>
+        <input type="tel" id="phone" name="Phone" placeholder="Enter your phone number" required>
+      </div>
+      <div>
+        <label for="address">Shipping Address</label>
+        <textarea id="address" name="Address" rows="3" placeholder="Enter your shipping address" required></textarea>
+      </div>
+      <button type="submit" class="place-order">Place Order</button>
+    </form>
+    <h3>Note : We Will Contact You Within 24 hours of Placing Your Order <br><br>
+      Shipping Fee will Paid Seprately By Customer
+    </h3>
+  </main>
+
+  <script>
+    // Cart Data (Stored in LocalStorage)
+    const cart = JSON.parse(localStorage.getItem('cart')) || { cartItems: [] };
+    const cartItemsContainer = document.getElementById('cart-items-summary');
+    const checkoutTotalElement = document.getElementById('checkout-total');
+
+    // Display Cart Summary
+    function displayCartSummary() {
+      cartItemsContainer.innerHTML = '';
+
+      if (cart.cartItems.length === 0) {
+        cartItemsContainer.innerHTML = '<p>No items in the cart yet.</p>';
+        checkoutTotalElement.textContent = '0.00';
+        return;
+      }
+
+      let total = 0;
+      cart.cartItems.forEach((item, index) => {
+        const cartItem = document.createElement('div');
+        cartItem.className = 'cart-item';
+        cartItem.innerHTML = `
+          <div class="cart-item-details">
+            <span class="cart-item-name">${item.name} (${item.size})</span>
+            <span class="cart-item-price">Rs ${item.price}</span>
+          </div>
+          <div class="cart-item-quantity">
+            <button class="decrease-quantity" data-index="${index}">-</button>
+            <span>${item.quantity}</span>
+            <button class="increase-quantity" data-index="${index}">+</button>
+          </div>
+          <button class="remove-item" data-index="${index}">Remove</button>
+        `;
+        cartItemsContainer.appendChild(cartItem);
+
+        total += item.price * item.quantity;
+      });
+
+      checkoutTotalElement.textContent = total.toFixed(2);
+
+      // Attach Event Listeners to Buttons
+      attachButtonListeners();
+    }
+
+    // Attach Event Listeners for Quantity and Remove Buttons
+    function attachButtonListeners() {
+      document.querySelectorAll('.decrease-quantity').forEach(button => {
+        button.addEventListener('click', (event) => {
+          const index = parseInt(event.target.dataset.index, 10);
+          if (cart.cartItems[index].quantity > 1) {
+            cart.cartItems[index].quantity -= 1;
+          } else {
+            cart.cartItems.splice(index, 1);
+          }
+          localStorage.setItem('cart', JSON.stringify(cart));
+          displayCartSummary();
+        });
+      });
+
+      document.querySelectorAll('.increase-quantity').forEach(button => {
+        button.addEventListener('click', (event) => {
+          const index = parseInt(event.target.dataset.index, 10);
+          cart.cartItems[index].quantity += 1;
+          localStorage.setItem('cart', JSON.stringify(cart));
+          displayCartSummary();
+        });
+      });
+
+      document.querySelectorAll('.remove-item').forEach(button => {
+        button.addEventListener('click', (event) => {
+          const index = parseInt(event.target.dataset.index, 10);
+          cart.cartItems.splice(index, 1);
+          localStorage.setItem('cart', JSON.stringify(cart));
+          displayCartSummary();
+        });
+      });
+    }
+
+    // Form Submission Handler
+    const form = document.getElementById('checkout-form');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault(); // Prevent page refresh
+
+      if (cart.cartItems.length === 0) {
+        alert('Your cart is empty.');
+        return;
+      }
+
+      // Collect form data
+      const formData = new FormData(form);
+      const contactInfo = {
+        name: formData.get('Name'),
+        email: formData.get('Email'),
+        phone: formData.get('Phone'),
+        address: formData.get('Address'),
+      };
+
+      // Combine with cart data
+      const orderData = {
+        contactInfo,
+        cartItems: cart.cartItems,
+        total: parseFloat(checkoutTotalElement.textContent),
+      };
+
+      // Send data via Formspree or console log for debugging
+      console.log('Order Data:', orderData);
+
+      // Formspree example:
+      fetch('https://formspree.io/f/xnnqkwgp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      })
+        .then(response => {
+          if (response.ok) {
+            alert('Order placed successfully!');
+            localStorage.removeItem('cart');
+            form.reset();
+            displayCartSummary();
+          } else {
+            alert('Failed to place the order. Try again later.');
+          }
+        })
+        .catch(error => {
+          console.error('Error placing order:', error);
+          alert('Failed to place the order. Try again later.');
+        });
+    });
+
+    // Initialize
+    displayCartSummary();
+  </script>
+</body>
+</html>
+
+<style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    form div {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .cart-item-details {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .cart-item-name {
+      font-weight: bold;
+    }
+
+    .cart-item-price {
+      color: #007bff;
+      font-weight: bold;
+    }
+
+    .cart-item-quantity {
+      display: flex;
+      align-items: center;
+    }
+
+    .cart-item-quantity button {
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      margin: 0 5px;
+    }
+
+    .cart-item-quantity button:hover {
+      background-color: #0056b3;
+    }
+
+    .cart-item-quantity span {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .remove-item {
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .remove-item:hover {
+      background-color: #a71d2a;
+    }
+
+    .checkout-total {
+      font-size: 1.5rem;
+      text-align: right;
+      margin-top: 10px;
+    }
+
+    button.place-order {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button.place-order:hover {
+      background-color: #0056b3;
+    }
+  </style>
